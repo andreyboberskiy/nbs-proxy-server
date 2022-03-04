@@ -1,6 +1,6 @@
 const axios = require("axios");
 const express = require("express");
-require('dotenv').config();
+require("dotenv").config();
 
 const { mapFormDataToSearchParams } = require("./utils");
 
@@ -9,7 +9,11 @@ app.use(express.json());
 
 const axiosInstance = axios.create({ baseURL: "https://account.nebeus.com" });
 const cookieString = process.env.COOKIE_FULL_STRING;
-console.log({cookieString})
+
+app.get("/api/v5/partner/getprofileimage", (req, res) => {
+  res.setHeader("cookie", cookieString);
+  return res.redirect("https://account.nebeus.com" + req.originalUrl);
+});
 
 app.get(/api/, async (req, res) => {
   try {
@@ -41,15 +45,21 @@ app.post(/api/, async (req, res) => {
     const byFormdata = contentType?.includes("form");
     if (byFormdata) {
       return mapFormDataToSearchParams(req, async (formdata) => {
-        const { data } = await axiosInstance.post(req.url, formdata, {
-          headers: {
-            cookie: cookieString,
-          },
-        });
+        try {
+          const { data } = await axiosInstance.post(req.url, formdata, {
+            headers: {
+              cookie: cookieString,
+            },
+          });
 
-        console.log("REQUEST POST ANSWER: ", req.url, data);
+          console.log("REQUEST POST ANSWER: ", req.url, data);
 
-        return res.status(200).json(data);
+          return res.status(200).json(data);
+        } catch (e) {
+          console.error("REQUEST POST ERROR FORMDATA: ", req.url, { error: e });
+
+          return res.status(e?.response?.status || 400).json(e);
+        }
       });
     } else {
       const { data } = await axiosInstance.post(req.url, req.body, {
